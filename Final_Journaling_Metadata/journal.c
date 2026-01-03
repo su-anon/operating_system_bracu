@@ -231,13 +231,13 @@ static void handle_create(int fd, const char *filename) {
     
     uint32_t free_inode_idx;
     if (!free_inode(fd, &sb, &free_inode_idx)) {
-        fprintf(stderr, "Error: No free inodes.\n"); //searches available inodes
+        fprintf(stderr, "No free inodes.\n"); //searches available inodes
         return;
     }
     
     uint32_t dir_blk, dir_off;
     if (!free_dirent(fd, &sb, filename, &dir_blk, &dir_off)) {
-         fprintf(stderr, "Error: Root directory full.\n"); //finds empty slot in root dir
+         fprintf(stderr, "Root directory full.\n"); //finds empty slot in root dir
          return;
     }
     
@@ -276,10 +276,10 @@ static void handle_create(int fd, const char *filename) {
             root_inode->size = req_size;
         }
     } else {
-        fprintf(stderr, "Warning: Root inode not in same block as new inode. Size update skipped.\n");
+        fprintf(stderr, "Root inode not in same block as new inode. Size update skipped.\n");
     }
     
-    //updates dir entry, handles filename (in RAM)
+    //updates dir entry, handles filename within RAM
     uint8_t dir_data_blk[BLOCK_SIZE];
     rd_updated_blk(fd, dir_blk, dir_data_blk);
     struct dirent *de = (struct dirent *)(dir_data_blk + dir_off);
@@ -292,7 +292,7 @@ static void handle_create(int fd, const char *filename) {
     uint32_t capacity = (JOURNAL_BLOCKS - 1) * BLOCK_SIZE;
     
     if (jh.nbytes_used + needed > capacity) {
-        fprintf(stderr, "Error: Journal full.\n");
+        fprintf(stderr, "Journal full.\n");
         return;
     }
     
@@ -374,10 +374,10 @@ static void handle_install(int fd) {
         
         if (rh.type == REC_DATA) {
 
-            printf("Reading journal record at offset %u... found DATA for block %u\n", journal_pointer, rh.block_no);
+            printf("Journal record at offset %u, Data found for block %u\n", journal_pointer, rh.block_no);
             //read data block
             if (q_count >= MAX_QUEUE) {
-                fprintf(stderr, "Error: Too many queued writes.\n");
+                fprintf(stderr, "Too many queued writes.\n");
                 return; 
             }
             q[q_count].block_no = rh.block_no;
@@ -387,8 +387,8 @@ static void handle_install(int fd) {
             journal_pointer += sizeof(rh) + BLOCK_SIZE;
         } else if (rh.type == REC_COMMIT) {
             //apply transaction
-            printf("Reading journal record at offset %u... found COMMIT.\n", journal_pointer);
-            printf("--> Transaction %d verified. Applying %d blocks.\n", transaction_count, q_count);
+            printf("Journal record at offset %u, Commit record found.\n", journal_pointer);
+            printf("Transaction %d verified. Applying %d blocks.\n", transaction_count, q_count);
             for (int i = 0; i < q_count; i++) {
                 wr_blk(fd, q[i].block_no, q[i].data);
             }
@@ -396,7 +396,7 @@ static void handle_install(int fd) {
             transaction_count++;
             journal_pointer += sizeof(rh);
         } else {
-            fprintf(stderr, "Warning: Unknown record type %u at %u. Aborting scan.\n", rh.type, journal_pointer);
+            fprintf(stderr, "Unknown record type found %u at %u.\n", rh.type, journal_pointer);
             break;
         }
     }
@@ -427,7 +427,7 @@ int main(int argc, char *argv[]) {
         if (argc == 3) {
             filename = argv[2];
         } else if (argc == 4) {
-            img_path = argv[2];
+            img_path = argv[2]; //optional img path
             filename = argv[3];
         } else {
             fprintf(stderr, "Usage: %s create <filename>\n", argv[0]);
@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
 
     } else if (strcmp(cmd, "install") == 0) {
         if (argc == 3) {
-            img_path = argv[2];
+            img_path = argv[2]; //optional img path
         } else if (argc > 3) {
              fprintf(stderr, "Usage: %s install\n", argv[0]);
              return 1;
